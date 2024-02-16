@@ -50,4 +50,4 @@ echo $jbskey > /home/admin/.ssh/authorized_keys
 sshd -t
 sudo systemctl restart sshd
 
-printf "$${BLUE} [!] Script finished.${NC}\n"
+printf "${BLUE} [!] Script finished.${NC}\n"
