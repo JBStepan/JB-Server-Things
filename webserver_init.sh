@@ -21,10 +21,6 @@ pkgs=(python3 python3-pip fail2ban ufw nginx)
 sudo apt-get -y --ignore-missing install "${pkgs[@]}" 
 sudo snap install --classic certbot -y
 
-printf "${BLUE} [!] Installing packages...${NC}\n"
-sudo certbot --nginx
-sudo systemctl restart nginx
-
 printf "${BLUE} [!]Enabling firewall...${NC}\n"
 # Add more rules in the future
 sudo ufw allow openssh
