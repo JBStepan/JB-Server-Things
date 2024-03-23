@@ -17,7 +17,7 @@ printf "${BLUE} [!] Updating system${NC}\n"
 sudo apt update && apt upgrade -y
 
 printf "${BLUE} [!] Installing packages...${NC}\n"
-pkgs=(python3 python3-pip fail2ban ufw)
+pkgs=(fail2ban ufw)
 sudo apt-get -y --ignore-missing install "${pkgs[@]}" 
 
 printf "${BLUE} [!]Enabling firewall...${NC}\n"
