@@ -13,7 +13,7 @@ printf "${BLUE} [!] Updating system 👆...${NC}\n"
 sudo apt update && apt upgrade -y
 
 printf "${BLUE} [!] Installing packages 📦...${NC}\n"
-pkgs=(fail2ban ufw git)
+pkgs=(fail2ban ufw git curl neofetch)
 sudo apt-get -y --ignore-missing install "${pkgs[@]}" 
 
 # Add Docker's official GPG key:
