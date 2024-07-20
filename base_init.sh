@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-# Init bash script for Ubuntu 22.04
-# For JB Stepan uses
-# Version 1.0.0
-
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
