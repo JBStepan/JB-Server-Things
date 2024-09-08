@@ -8,7 +8,7 @@ printf "${BLUE} [!] Creating user account 🧑...${NC}\n"
 useradd -m -U -s /bin/bash -G sudo admin
 passwd admin
 
-printf "${BLUE} [!] Updating system 👆...${NC}\n"
+printf "${BLUE} [!] Updating system ⬆️...${NC}\n"
 # This will update and upgrade the system packages
 apt update && apt upgrade -y
 
