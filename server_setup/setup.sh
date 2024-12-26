@@ -1,71 +1,131 @@
 #!/usr/bin/env bash
+####################################################
+# This is free and unencumbered software released into the public domain.
+#
+# Anyone is free to copy, modify, publish, use, compile, sell, or
+# distribute this software, either in source code form or as a compiled
+# binary, for any purpose, commercial or non-commercial, and by any
+# means.
+#
+# In jurisdictions that recognize copyright laws, the author or authors
+# of this software dedicate any and all copyright interest in the
+# software to the public domain. We make this dedication for the benefit
+# of the public at large and to the detriment of our heirs and
+# successors. We intend this dedication to be an overt act of
+# relinquishment in perpetuity of all present and future rights to this
+# software under copyright law.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
+# For more information, please refer to <https://unlicense.org>
+#
+# Created by JB Stepan <jbstepan.com>
+####################################################
+
+username="" # Required
+password="" # Required
+ssh_key="" # Required
+install_docker=true
+firewall_enable=true
+ufw_allowed=(22, 80, 443)
+addtional_packages=(vim)
+remove_packages=(nano)
+timezone="Etc/UTC"
+
+####################################################
 
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Enter the username and password of the non root user you want to create
-username=""
-password=""
+createUser() {
+  printf "${BLUE} [!] Creating user account 🧑...${NC}\n"
 
-printf "${BLUE} [!] Creating user account 🧑...${NC}\n"
-# This  handles the user account creation
-useradd -m -U -s /bin/bash -G sudo $username
-echo $username:$password | chpasswd
+  useradd -m -U -s /bin/bash -G sudo $username
+  echo $username:$password | chpasswd
+}
 
-printf "${BLUE} [!] Updating system ⬆️...${NC}\n"
-# This will update and upgrade the system packages
-apt update && apt upgrade -y
+packages() {
+  printf "${BLUE} [!] Updating system ⬆️...${NC}\n"
+  apt -y update && apt upgrade 
 
-printf "${BLUE} [!] Installing packages 📦...${NC}\n"
-pkgs=(fail2ban ufw git curl)
-apt-get -y --ignore-missing install "${pkgs[@]}" 
+  printf "${BLUE} [!] Installing packages 📦...${NC}\n"
+  pkgs=(fail2ban ufw curl)
+  apt -y --ignore-missing install "${pkgs[@]}" 
+  apt -y --ignore-missing install "${addtional_packages[@]}" 
 
-# Add Docker's official GPG key:
-printf "${BLUE} [!] Installing Docker 🐳...${NC}\n"
-apt-get update
-apt-get install ca-certificates curl -y
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-chmod a+r /etc/apt/keyrings/docker.asc
+  printf "${BLUE} [!] Removing packages ❌...${NC}\n"
+  apt -y --ignore-missing remove "${remove_packages[@]}"
 
-# Add the repository to Apt sources:
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt update
+  if ["$install_docker" = true] ; then
+    # Add Docker's official GPG key:
+    printf "${BLUE} [!] Installing Docker 🐳...${NC}\n"
+    apt-get update
+    apt-get install ca-certificates curl -y
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
 
-apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+      tee /etc/apt/sources.list.d/docker.list > /dev/null
+    apt update
 
+    apt -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 
+  fi
+}
 
-printf "${BLUE} [!]Enabling firewall 🔥...${NC}\n"
-# Add more rules in the future
-sudo ufw allow ssh
-sudo ufw enable
+firewall() {
+  printf "${BLUE} [!]Configuring firewall 🔥...${NC}\n"
+  for i in "${ufw_allowed[@]}"; do
+    echo "$i"
+  done
+  sudo ufw enable
+}
 
-printf "${BLUE} [!] Configuring SSH 🐚...${NC}\n"
-# Change someconfig in SSH
-sed -i -e '/^\(#\|\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i -e '/^\(#\|\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config
-sed -i -e '/^\(#\|\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
-sed -i -e '/^\(#\|\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
-sed -i -e '/^\(#\|\)MaxAuthTries/s/^.*$/MaxAuthTries 2/' /etc/ssh/sshd_config
-sed -i -e '/^\(#\|\)AllowTcpForwarding/s/^.*$/AllowTcpForwarding no/' /etc/ssh/sshd_config
-sed -i -e '/^\(#\|\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config
-sed -i -e '/^\(#\|\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config
-sed -i -e '/^\(#\|\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\/authorized_keys/' /etc/ssh/sshd_config
+ssh() {
+  printf "${BLUE} [!] Configuring SSH 🐚...${NC}\n"
+  # Change someconfig in SSH
+  sed -i -e '/^\(#\|\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
+  sed -i -e '/^\(#\|\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config
+  sed -i -e '/^\(#\|\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
+  sed -i -e '/^\(#\|\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+  sed -i -e '/^\(#\|\)MaxAuthTries/s/^.*$/MaxAuthTries 2/' /etc/ssh/sshd_config
+  sed -i -e '/^\(#\|\)AllowTcpForwarding/s/^.*$/AllowTcpForwarding no/' /etc/ssh/sshd_config
+  sed -i -e '/^\(#\|\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config
+  sed -i -e '/^\(#\|\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config
+  sed -i -e '/^\(#\|\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\/authorized_keys/' /etc/ssh/sshd_config
 
-jbskey="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7xo/5Ig9j+5yv+RriZjBwbSTAguOemmMmbi0Xa6tulWd6+J0+yFpeZmyMszwI+jEazFsF1YWm1X7QKpvEIGR0wUxk0eGC+DacWRbDjLq9pVUnDWMwMG4DBu/s6TgYYzbPTkIKoQM1+OBhLTJLeeW9fbw+Y1XSbfHTQlC1+XHxwbh+M6Ilb+GqQLagpBTr1adi9dWrLx8sMcg7ERw9msCg1iLloiVq70cBSV2sxzCPmxUCyyS+PmufDY9Dhw8hLW52q+EBCkOdJbU83w1HOuSpTnX7VrgjlcwC/XnMkfxBvFqqAQ1RyBk+0WhLtbswsVabIymW1hrcTTYpWrgMuXKl jbstepan@jbstepan.com"
+  mkdir /home/$username/.ssh
 
-mkdir /home/$username/.ssh
+  touch /home/$username/.ssh/authorized_keys
 
-touch /home/$username/.ssh/authorized_keys
+  echo $ssh_key > /home/$username/.ssh/authorized_keys
 
-echo $jbskey > /home/$username/.ssh/authorized_keys
+  sshd -t
+  sudo systemctl restart sshd
+}
 
-sshd -t
-sudo systemctl restart sshd
+misc() {
+  timedatectl set-timezone ${timezone}
+}
 
-timedatectl set-timezone America/Chicago
+main() {
+  createUser
+  packages
+  if ["$firewall_enable" = true] ; then
+    firewall
+  fi
+  ssh
+  misc
 
-printf "${BLUE} [!] Script finished ✅.${NC}\n"
+  printf "${BLUE} [!] Script finished ✅.${NC}\n"
+}
+
+main
