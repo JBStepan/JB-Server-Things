@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#+/usr/bin/env bash
 ####################################################
 # This is free and unencumbered software released into the public domain.
 #
@@ -31,40 +31,42 @@
 username="" # Required
 password="" # Required
 ssh_key="" # Required
-install_docker=true
+install_docker=false
 firewall_enable=true
-ufw_allowed=(22, 80, 443)
+ufw_allowed=(22)
 addtional_packages=(vim)
 remove_packages=(nano)
 timezone="Etc/UTC"
+hostname=""
 
 ####################################################
 
-BLUE='\033[0;34m'
-NC='\033[0m'
+GREEN='\e[32m'
+YELLOW='\e[33m'
+NC='\e[0m'
 
 createUser() {
-  printf "${BLUE} [!] Creating user account 🧑...${NC}\n"
+  echo -e "${GREEN}[+] Creating user account 🧑...${NC}\n"
 
   useradd -m -U -s /bin/bash -G sudo $username
   echo $username:$password | chpasswd
 }
 
 packages() {
-  printf "${BLUE} [!] Updating system ⬆️...${NC}\n"
+  echo -e "${GREEN}[+] Updating system ⬆️...${NC}\n"
   apt -y update && apt upgrade 
 
-  printf "${BLUE} [!] Installing packages 📦...${NC}\n"
+  echo -e "${GREEN}[+] Installing packages 📦...${NC}\n"
   pkgs=(fail2ban ufw curl)
   apt -y --ignore-missing install "${pkgs[@]}" 
   apt -y --ignore-missing install "${addtional_packages[@]}" 
 
-  printf "${BLUE} [!] Removing packages ❌...${NC}\n"
+  echo -e "${GREEN}[+] Removing packages ❌...${NC}\n"
   apt -y --ignore-missing remove "${remove_packages[@]}"
 
-  if ["$install_docker" = true] ; then
+  if [[ "$install_docker" == true ]] ; then
     # Add Docker's official GPG key:
-    printf "${BLUE} [!] Installing Docker 🐳...${NC}\n"
+    echo -e "${GREEN}[+] Installing Docker 🐳...${NC}\n"
     apt-get update
     apt-get install ca-certificates curl -y
     install -m 0755 -d /etc/apt/keyrings
@@ -82,15 +84,15 @@ packages() {
 }
 
 firewall() {
-  printf "${BLUE} [!]Configuring firewall 🔥...${NC}\n"
+  echo -e "${GREEN}[+]Configuring firewall 🔥...${NC}\n"
   for i in "${ufw_allowed[@]}"; do
-    echo "$i"
+    ufw allow "$i"
   done
   sudo ufw enable
 }
 
 ssh() {
-  printf "${BLUE} [!] Configuring SSH 🐚...${NC}\n"
+  echo -e "${GREEN}[+] Configuring SSH 🐚...${NC}\n"
   # Change someconfig in SSH
   sed -i -e '/^\(#\|\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
   sed -i -e '/^\(#\|\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config
@@ -114,18 +116,25 @@ ssh() {
 
 misc() {
   timedatectl set-timezone ${timezone}
+
+  if [[ -z "$hostname" ]]; then
+    echo -e "${YELLOW}[!] No hostname specified${NC}\n"
+  else
+    echo -e "${GREEN}[+] Changing hostname to ${hostname}🏷️... ${NC}\n"
+    hostnamectl hostname ${hostname}
+  fi
 }
 
 main() {
   createUser
   packages
-  if ["$firewall_enable" = true] ; then
+  if [[ "$firewall_enable" == true ]] ; then
     firewall
   fi
   ssh
   misc
 
-  printf "${BLUE} [!] Script finished ✅.${NC}\n"
+  echo -e "${GREEN}[+] Script finished ✅.${NC}\n"
 }
 
 main
