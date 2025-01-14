@@ -80,6 +80,11 @@ packages() {
     apt update
 
     apt -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 
+
+    # Add the given user to the docker group, allows for the running of docker commands without using sudo
+    groupadd docker
+    usermod -aG docker $username
+    newgrp docker
   fi
 }
 
