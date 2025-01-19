@@ -32,7 +32,7 @@ username="" # Required
 password="" # Required
 ssh_key="" # Required
 install_docker=false
-firewall_enable=true
+firewall_enable=false
 ufw_allowed=(22)
 addtional_packages=(vim)
 remove_packages=(nano)
@@ -124,9 +124,11 @@ misc() {
 
   if [[ -z "$hostname" ]]; then
     echo -e "${YELLOW}[!] No hostname specified${NC}\n"
+    
   else
     echo -e "${GREEN}[+] Changing hostname to ${hostname}🏷️... ${NC}\n"
     hostnamectl hostname ${hostname}
+    sudo sed -i "/^127.0.0.1\s\+localhost$/a $hostname" "/etc/hosts"
   fi
 }
 

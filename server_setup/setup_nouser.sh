@@ -1,4 +1,4 @@
-#+/usr/bin/env bash
+#!/usr/bin/env bash
 ####################################################
 # This is free and unencumbered software released into the public domain.
 #
@@ -28,10 +28,10 @@
 # Created by JB Stepan <jbstepan.com>
 ####################################################
 
-username="" # Required, name of existing user
+username="" # Required
 ssh_key="" # Required
 install_docker=false
-firewall_enable=true
+firewall_enable=false
 ufw_allowed=(22)
 addtional_packages=(vim)
 remove_packages=(nano)
@@ -43,13 +43,6 @@ hostname=""
 GREEN='\e[32m'
 YELLOW='\e[33m'
 NC='\e[0m'
-
-createUser() {
-  echo -e "${GREEN}[+] Creating user account 🧑...${NC}\n"
-
-  useradd -m -U -s /bin/bash -G sudo $username
-  echo $username:$password | chpasswd
-}
 
 packages() {
   echo -e "${GREEN}[+] Updating system ⬆️...${NC}\n"
@@ -79,6 +72,11 @@ packages() {
     apt update
 
     apt -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 
+
+    # Add the given user to the docker group, allows for the running of docker commands without using sudo
+    groupadd docker
+    usermod -aG docker $username
+    newgrp docker
   fi
 }
 
@@ -118,14 +116,15 @@ misc() {
 
   if [[ -z "$hostname" ]]; then
     echo -e "${YELLOW}[!] No hostname specified${NC}\n"
+    
   else
     echo -e "${GREEN}[+] Changing hostname to ${hostname}🏷️... ${NC}\n"
     hostnamectl hostname ${hostname}
+    sudo sed -i "/^127.0.0.1\s\+localhost$/a $hostname" "/etc/hosts"
   fi
 }
 
 main() {
-  createUser
   packages
   if [[ "$firewall_enable" == true ]] ; then
     firewall
